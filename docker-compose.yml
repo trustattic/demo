@@ -25,6 +25,7 @@ services:
       - "8081:8081"
     environment:
       TOKENCIPHER_KEY: 0123456789abcdef
+      CONNECTIONCIPHER_KEY: 0123456789abcdef
       DB_SOURCE: "postgres://postgres:postgres@postgres:5432/postgres"
       API_PORT: 8081
       DB_MIGRATIONSDIR: "/var/run/ko/migrations"
