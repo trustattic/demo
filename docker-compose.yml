@@ -1,51 +1,98 @@
-version: '3.8'
-
 services:
   postgres:
-    image: postgres:16-alpine
-    container_name: postgres
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: coreapi
+      POSTGRES_PASSWORD: coreapi
+      POSTGRES_DB: coreapi
     ports:
       - "5432:5432"
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: postgres
-    restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U coreapi"]
       interval: 5s
       timeout: 5s
       retries: 5
 
-  coreapi:
-    image: ghcr.io/trustattic/coreapi:latest
-    container_name: coreapi
-    pull_policy: always
+  cloudapi:
+    image: ghcr.io/trustattic/cloudapi:v0.0.8
+
+  coreapi-api:
+    image: ghcr.io/trustattic/coreapi:v2.0.0-alpha8
+    command: ["api"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      cloudapi:
+        condition: service_started
     ports:
-      - "8081:8081"
+      - "8080:8080"
     environment:
-      TOKENCIPHER_KEY: 0123456789abcdef
-      CONNECTIONCIPHER_KEY: 0123456789abcdef
-      DB_SOURCE: "postgres://postgres:postgres@postgres:5432/postgres"
-      API_PORT: 8081
+      DB_SOURCE: postgres://coreapi:coreapi@postgres:5432/coreapi?sslmode=disable
       DB_MIGRATIONSDIR: "/var/run/ko/migrations"
-    entrypoint: "/ko-app/coreapi run"
+      JOB_SERVICE: river
+      JOB_DBSOURCE: postgres://coreapi:coreapi@postgres:5432/coreapi?sslmode=disable
+      TOKENCIPHER_KEY: ""
+      CONNECTIONCIPHER_KEY: ""
+      TOKENIZER_0_KIND: paseto
+      TOKENIZER_0_PUBLICKEY: ""
+      TOKENIZER_1_KIND: jwt
+      TOKENIZER_1_PUBLICKEY: ""
+      ISSUER_KIND: paseto
+      ISSUER_SECRETKEY: ""
+      CLOUDAPI_URL: cloudapi:50051
+      LOGLEVEL: debug
+
+  coreapi-worker:
+    image: ghcr.io/trustattic/coreapi:v2.0.0-alpha8
+    command: ["worker"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      coreapi-api:
+        condition: service_started
+      cloudapi:
+        condition: service_started
+    environment:
+      DB_SOURCE: postgres://coreapi:coreapi@postgres:5432/coreapi?sslmode=disable
+      DB_MIGRATIONSDIR: "/var/run/ko/migrations"
+      JOB_SERVICE: river
+      JOB_DBSOURCE: postgres://coreapi:coreapi@postgres:5432/coreapi?sslmode=disable
+      TOKENCIPHER_KEY: ""
+      CONNECTIONCIPHER_KEY: ""
+      TOKENIZER_0_KIND: paseto
+      TOKENIZER_0_PUBLICKEY: ""
+      TOKENIZER_1_KIND: jwt
+      TOKENIZER_1_PUBLICKEY: ""
+      ISSUER_KIND: paseto
+      ISSUER_SECRETKEY: ""
+      CLOUDAPI_URL: cloudapi:50051
+      LOGLEVEL: debug
+
+  riverui:
+    image: ghcr.io/riverqueue/riverui:latest
+    container_name: river
+    ports:
+      - "8082:8080"
+    environment:
+      DATABASE_URL: "postgres://coreapi:coreapi@postgres:5432/coreapi?sslmode=disable"
+    restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
 
   ui:
-    image: ghcr.io/trustattic/ui:latest
+    image: ghcr.io/trustattic/ui:v2.0.0-alpha.13
     container_name: ui
     pull_policy: always
     ports:
       - "3069:3069"
     environment:
-      NUXT_API_KEY: ""
+      NUXT_API_URL: ""
+      NUXT_SECRET_KEY: ""
+      NUXT_SESSION_PASSWORD: ""
       NUXT_OAUTH_AUTH0_CLIENT_ID: ""
       NUXT_OAUTH_AUTH0_CLIENT_SECRET: ""
       NUXT_OAUTH_AUTH0_DOMAIN: ""
-      NUXT_SESSION_PASSWORD: ""
     depends_on:
       coreapi:
-        condition: service_started
+        condition: service_healthy
