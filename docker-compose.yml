@@ -2,9 +2,9 @@ services:
   postgres:
     image: postgres:17-alpine
     environment:
-      POSTGRES_USER: coreapi
-      POSTGRES_PASSWORD: coreapi
-      POSTGRES_DB: coreapi
+      POSTGRES_USER: platform
+      POSTGRES_PASSWORD: platform
+      POSTGRES_DB: platform
     ports:
       - "5432:5432"
     healthcheck:
@@ -14,11 +14,11 @@ services:
       retries: 5
 
   cloudapi:
-    image: ghcr.io/trustattic/cloudapi:v0.0.8
+    image: ghcr.io/trustattic/cloudapi:v0.0.9
 
-  coreapi-api:
-    image: ghcr.io/trustattic/coreapi:v2.0.0-alpha8
-    command: ["api"]
+  platform:
+    image: ghcr.io/trustattic/platform:v2.0.0-RC2
+    command: [ "api" ]
     depends_on:
       postgres:
         condition: service_healthy
@@ -27,7 +27,7 @@ services:
     ports:
       - "8080:8080"
     environment:
-      DB_SOURCE: postgres://coreapi:coreapi@postgres:5432/coreapi?sslmode=disable
+      DB_SOURCE: postgres://platform:platform@postgres:5432/platform?sslmode=disable
       DB_MIGRATIONSDIR: "/var/run/ko/migrations"
       JOB_SERVICE: river
       JOB_DBSOURCE: postgres://coreapi:coreapi@postgres:5432/coreapi?sslmode=disable
@@ -42,18 +42,18 @@ services:
       CLOUDAPI_URL: cloudapi:50051
       LOGLEVEL: debug
 
-  coreapi-worker:
-    image: ghcr.io/trustattic/coreapi:v2.0.0-alpha8
-    command: ["worker"]
+  platform-worker:
+    image: ghcr.io/trustattic/platform:v2.0.0-RC2
+    command: [ "worker" ]
     depends_on:
       postgres:
         condition: service_healthy
-      coreapi-api:
+      platform:
         condition: service_started
       cloudapi:
         condition: service_started
     environment:
-      DB_SOURCE: postgres://coreapi:coreapi@postgres:5432/coreapi?sslmode=disable
+      DB_SOURCE: postgres://platform:platform@postgres:5432/platform?sslmode=disable
       DB_MIGRATIONSDIR: "/var/run/ko/migrations"
       JOB_SERVICE: river
       JOB_DBSOURCE: postgres://coreapi:coreapi@postgres:5432/coreapi?sslmode=disable
@@ -74,14 +74,15 @@ services:
     ports:
       - "8082:8080"
     environment:
-      DATABASE_URL: "postgres://coreapi:coreapi@postgres:5432/coreapi?sslmode=disable"
+      DATABASE_URL: "postgres://platform:platform@postgres:5432/platform?sslmode=disable"
     restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
 
   ui:
-    image: ghcr.io/trustattic/ui:v2.0.0-alpha.13
+    image: ghcr.io/trustattic/ui:v2.0.0-alpha.14
+    platform: linux/amd64
     container_name: ui
     pull_policy: always
     ports:
@@ -94,5 +95,5 @@ services:
       NUXT_OAUTH_AUTH0_CLIENT_SECRET: ""
       NUXT_OAUTH_AUTH0_DOMAIN: ""
     depends_on:
-      coreapi:
+      platform:
         condition: service_healthy
