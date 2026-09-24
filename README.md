@@ -14,7 +14,9 @@ You must have access to the TRUSTATTIC repositories.
 
 ### Create a Token
 1. Create a Personal Access Token (PAT) to authenticate with the GitHub repository
-2. Go to https://github.com/settings/tokens and select **New personal access token (classic)**
+2. Go to https://github.com/settings/tokens/new to create a classic token directly
+   (or navigate manually: **Settings → Developer settings → Personal access tokens →
+   Tokens (classic) → Generate new token → Generate new token (classic)**)
 3. In the scopes section, select only **read:packages**
 
 ![img.png](img.png)
